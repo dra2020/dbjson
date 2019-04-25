@@ -1,8 +1,8 @@
 {
-  "name": "@terrencecrowley/jsondb",
+  "name": "@terrencecrowley/dbjson",
   "version": "1.0.2",
   "description": "JSON file-based implementation of the simple DB abstraction.",
-  "main": "dist/jsondb.js",
+  "main": "dist/dbjson.js",
   "types": "./dist/all.d.ts",
   "scripts": {
     "test": "echo \"No test defined.\"",
@@ -11,7 +11,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/terrencecrowley/jsondb.git"
+    "url": "git+https://github.com/terrencecrowley/dbjson.git"
   },
   "keywords": [
     "Typescript"
@@ -19,9 +19,9 @@
   "author": "Terry Crowley",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/terrencecrowley/jsondb/issues"
+    "url": "https://github.com/terrencecrowley/dbjson/issues"
   },
-  "homepage": "https://github.com/terrencecrowley/jsondb#readme",
+  "homepage": "https://github.com/terrencecrowley/dbjson#readme",
   "devDependencies": {
     "@types/node": "10.12.23",
     "source-map-loader": "^0.2.4",

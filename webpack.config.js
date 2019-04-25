@@ -5,10 +5,10 @@ var libConfig = {
     target: 'node',
     mode: 'development',
     output: {
-        library: 'jsondb',
+        library: 'dbjson',
         libraryTarget: 'umd',
         path: __dirname + '/dist',
-        filename: 'jsondb.js'
+        filename: 'dbjson.js'
     },
 
     // Enable source maps

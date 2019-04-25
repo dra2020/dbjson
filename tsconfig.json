@@ -1,7 +1,7 @@
 {
 	"files": [
 		"lib/all.ts",
-		"lib/jsondb.ts"
+		"lib/dbjson.ts"
 	],
 
   "include": [

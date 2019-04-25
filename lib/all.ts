@@ -1,1 +1,1 @@
-export * from './jsondb';
+export * from './dbjson';
