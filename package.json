@@ -1,6 +1,6 @@
 {
   "name": "@terrencecrowley/dbjson",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "JSON file-based implementation of the simple DB abstraction.",
   "main": "dist/dbjson.js",
   "types": "./dist/all.d.ts",
@@ -32,11 +32,11 @@
     "webpack-cli": "^3.2.3"
   },
   "dependencies": {
-    "@terrencecrowley/context": "^1.0.2",
-    "@terrencecrowley/dbabstract": "^1.0.1",
-    "@terrencecrowley/fsm": "^1.0.2",
-    "@terrencecrowley/log": "^1.0.1",
-    "@terrencecrowley/storage": "^1.0.1",
-    "@terrencecrowley/util": "^1.0.14"
+    "@terrencecrowley/context": "^1.0.4",
+    "@terrencecrowley/dbabstract": "^1.0.3",
+    "@terrencecrowley/fsm": "^1.0.3",
+    "@terrencecrowley/log": "^1.0.4",
+    "@terrencecrowley/storage": "^1.0.8",
+    "@terrencecrowley/util": "^1.0.15"
   }
 }
