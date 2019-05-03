@@ -126,7 +126,6 @@ __export(__webpack_require__(/*! ./dbjson */ "./lib/dbjson.ts"));
 Object.defineProperty(exports, "__esModule", { value: true });
 // Shared libraries
 const Util = __webpack_require__(/*! @terrencecrowley/util */ "@terrencecrowley/util");
-const Log = __webpack_require__(/*! @terrencecrowley/log */ "@terrencecrowley/log");
 const FSM = __webpack_require__(/*! @terrencecrowley/fsm */ "@terrencecrowley/fsm");
 const Storage = __webpack_require__(/*! @terrencecrowley/storage */ "@terrencecrowley/storage");
 const DB = __webpack_require__(/*! @terrencecrowley/dbabstract */ "@terrencecrowley/dbabstract");
@@ -137,20 +136,21 @@ const DB = __webpack_require__(/*! @terrencecrowley/dbabstract */ "@terrencecrow
 //  noobject: if set and true, indicates that the value is a direct value (string) rather than an object with fields
 //
 class JsonBlob extends Storage.StorageBlob {
-    constructor(id, fsm, options) {
+    constructor(env, id, fsm, options) {
         if (id.indexOf('.json') == -1)
             id += '.json';
-        super(id);
+        super(env, id);
         this.options = options;
         this.value = null;
         this.fsm = fsm;
     }
+    get env() { return this._env; }
     endSave(br) {
         if (br.result() != Storage.ESuccess) {
-            Log.error('jsondb: json save failed');
+            this.env.log.error('jsondb: json save failed');
         }
         else {
-            Log.event('jsondb: save succeeded');
+            this.env.log.event('jsondb: save succeeded');
         }
     }
     endLoad(br) {
@@ -159,36 +159,36 @@ class JsonBlob extends Storage.StorageBlob {
             if (this.id == 'state.json') {
                 this.value = {};
                 this.setLoaded(Storage.StorageStateClean);
-                Log.event('jsondb: initializing to empty session index state');
+                this.env.log.event('jsondb: initializing to empty session index state');
                 this.fsm.setState(FSM.FSM_DONE);
             }
             else if (this.id == 'access.json') {
                 this.value = {};
                 this.setLoaded(Storage.StorageStateClean);
-                Log.event('jsondb: initializing to empty access to session index state');
+                this.env.log.event('jsondb: initializing to empty access to session index state');
                 this.fsm.setState(FSM.FSM_DONE);
             }
             else if (this.id == 'users.json') {
                 this.value = [];
                 this.setLoaded(Storage.StorageStateClean);
-                Log.event('jsondb: initializing to empty user index state');
+                this.env.log.event('jsondb: initializing to empty user index state');
                 this.fsm.setState(FSM.FSM_DONE);
             }
             else {
-                Log.error(`JsonBlob: load of ${this.id} failed: ${br.asError()}`);
+                this.env.log.error(`JsonBlob: load of ${this.id} failed: ${br.asError()}`);
                 this.fsm.setState(FSM.FSM_ERROR);
-                Log.error('jsondb: load failed');
+                this.env.log.error('jsondb: load failed');
             }
         }
         else {
             this.fromString(br.asString());
             this.fsm.setState(FSM.FSM_DONE);
-            Log.event('jsondb: load succeeded');
+            this.env.log.event('jsondb: load succeeded');
         }
     }
     endDelete(br) {
         if (br.result() != Storage.ESuccess) {
-            Log.event('jsondb: delete failed');
+            this.env.log.event('jsondb: delete failed');
         }
     }
     fromString(s) {
@@ -197,20 +197,20 @@ class JsonBlob extends Storage.StorageBlob {
             if (this.options.version === undefined)
                 this.value = o;
             else if (o.version != this.options.version)
-                Log.error(`jsonBlob: version mismatch for ${this.id}: expected ${this.options.version} != ${o.version}`);
+                this.env.log.error(`jsonBlob: version mismatch for ${this.id}: expected ${this.options.version} != ${o.version}`);
             else if (o[this.options.name] === undefined)
-                Log.error(`jsonBlob: missing value for ${this.id}: expected ${this.options.name}`);
+                this.env.log.error(`jsonBlob: missing value for ${this.id}: expected ${this.options.name}`);
             else
                 this.value = o[this.options.name];
             if (this.value) {
                 if (this.options.map)
-                    Log.event(`jsondb: JsonBlob: successful load of ${this.id}: hashmap`);
+                    this.env.log.event(`jsondb: JsonBlob: successful load of ${this.id}: hashmap`);
                 else
-                    Log.event(`INFO: JsonBlob: successful load of ${this.id}: array of ${this.value.length} items`);
+                    this.env.log.event(`INFO: JsonBlob: successful load of ${this.id}: array of ${this.value.length} items`);
             }
         }
         catch (err) {
-            Log.error(`JsonBlob: unexpected exception in JSON parse: ${err.message}`);
+            this.env.log.error(`JsonBlob: unexpected exception in JSON parse: ${err.message}`);
         }
     }
     asString() {
@@ -224,29 +224,30 @@ class JsonBlob extends Storage.StorageBlob {
 }
 exports.JsonBlob = JsonBlob;
 class JsonClient extends DB.DBClient {
-    constructor(storageManager) {
-        super('JsonClient', storageManager);
+    constructor(env) {
+        super(env);
     }
+    get env() { return this._env; }
     createCollection(name, options) {
-        return new JsonCollection('JsonCollection', this, name, options);
+        return new JsonCollection(this.env, this, name, options);
     }
     createUpdate(col, query, values) {
-        return new JsonUpdate('JsonUpdate', col, query, values);
+        return new JsonUpdate(this.env, col, query, values);
     }
     createDelete(col, query) {
-        return new JsonDelete('JsonDelete', col, query);
+        return new JsonDelete(this.env, col, query);
     }
     createFind(col, filter) {
-        return new JsonFind('JsonFind', col, filter);
+        return new JsonFind(this.env, col, filter);
     }
     createQuery(col, filter) {
-        return new JsonQuery('JsonQuery', col, filter);
+        return new JsonQuery(this.env, col, filter);
     }
     createIndex(col, uid) {
-        return new JsonIndex('JsonIndex', col, uid);
+        return new JsonIndex(this.env, col, uid);
     }
     createClose() {
-        return new JsonClose('JsonClose', this);
+        return new JsonClose(this.env, this);
     }
     tick() {
         if (this.ready && this.state == FSM.FSM_STARTING) {
@@ -255,34 +256,34 @@ class JsonClient extends DB.DBClient {
         }
         if (this.state == DB.FSM_NEEDRELEASE) {
             this.setState(FSM.FSM_RELEASED);
-            Log.event(`jsondb: client closed`);
+            this.env.log.event(`jsondb: client closed`);
         }
     }
 }
 exports.JsonClient = JsonClient;
 class JsonCollection extends DB.DBCollection {
-    constructor(typeName, client, name, options) {
-        super(typeName, client, name, options);
+    constructor(env, client, name, options) {
+        super(env, client, name, options);
         this.waitOn(client);
-        this.blob = new JsonBlob(name, this, options);
+        this.blob = new JsonBlob(env, name, this, options);
         this.save = this.save.bind(this);
         setTimeout(this.save, 30000);
     }
     save() {
-        this.blob.checkSave(this.client.storageManager);
+        this.blob.checkSave(this.client.env.storageManager);
         setTimeout(this.save, 30000);
     }
     tick() {
         if (this.ready && this.state == FSM.FSM_STARTING) {
             this.setState(FSM.FSM_PENDING);
-            this.blob.startLoad(this.client.storageManager); // Done or failed state set in endLoad
+            this.blob.startLoad(this.client.env.storageManager); // Done or failed state set in endLoad
         }
     }
 }
 exports.JsonCollection = JsonCollection;
 class JsonUpdate extends DB.DBUpdate {
-    constructor(typeName, col, query, values) {
-        super(typeName, col, query, values);
+    constructor(env, col, query, values) {
+        super(env, col, query, values);
         this.waitOn(col);
     }
     get blob() {
@@ -323,8 +324,8 @@ class JsonUpdate extends DB.DBUpdate {
 }
 exports.JsonUpdate = JsonUpdate;
 class JsonDelete extends DB.DBDelete {
-    constructor(typeName, col, query) {
-        super(typeName, col, query);
+    constructor(env, col, query) {
+        super(env, col, query);
         this.waitOn(col);
     }
     get blob() {
@@ -352,8 +353,8 @@ class JsonDelete extends DB.DBDelete {
 }
 exports.JsonDelete = JsonDelete;
 class JsonFind extends DB.DBFind {
-    constructor(typeName, col, filter) {
-        super(typeName, col, filter);
+    constructor(env, col, filter) {
+        super(env, col, filter);
         this.waitOn(col);
     }
     get blob() {
@@ -397,8 +398,8 @@ class JsonFind extends DB.DBFind {
 }
 exports.JsonFind = JsonFind;
 class JsonQuery extends DB.DBQuery {
-    constructor(typeName, col, filter) {
-        super(typeName, col, filter);
+    constructor(env, col, filter) {
+        super(env, col, filter);
         this.waitOn(col);
     }
     get blob() {
@@ -430,8 +431,8 @@ class JsonQuery extends DB.DBQuery {
 }
 exports.JsonQuery = JsonQuery;
 class JsonIndex extends DB.DBIndex {
-    constructor(typeName, col, uid) {
-        super(typeName, col, uid);
+    constructor(env, col, uid) {
+        super(env, col, uid);
         this.waitOn(col);
     }
     tick() {
@@ -445,8 +446,8 @@ class JsonIndex extends DB.DBIndex {
 }
 exports.JsonIndex = JsonIndex;
 class JsonClose extends DB.DBClose {
-    constructor(typeName, client) {
-        super(typeName, client);
+    constructor(env, client) {
+        super(env, client);
     }
 }
 exports.JsonClose = JsonClose;
@@ -473,17 +474,6 @@ module.exports = require("@terrencecrowley/dbabstract");
 /***/ (function(module, exports) {
 
 module.exports = require("@terrencecrowley/fsm");
-
-/***/ }),
-
-/***/ "@terrencecrowley/log":
-/*!***************************************!*\
-  !*** external "@terrencecrowley/log" ***!
-  \***************************************/
-/*! no static exports found */
-/***/ (function(module, exports) {
-
-module.exports = require("@terrencecrowley/log");
 
 /***/ }),
 

@@ -1,11 +1,20 @@
+import * as Context from '@terrencecrowley/context';
+import * as LogAbstract from '@terrencecrowley/logabstract';
 import * as FSM from '@terrencecrowley/fsm';
 import * as Storage from '@terrencecrowley/storage';
 import * as DB from '@terrencecrowley/dbabstract';
+interface DBJSONEnvironment {
+    context: Context.IContext;
+    log: LogAbstract.ILog;
+    fsmManager: FSM.FsmManager;
+    storageManager: Storage.StorageManager;
+}
 export declare class JsonBlob extends Storage.StorageBlob {
     options: any;
     value: any;
     fsm: FSM.Fsm;
-    constructor(id: string, fsm: FSM.Fsm, options: any);
+    constructor(env: DBJSONEnvironment, id: string, fsm: FSM.Fsm, options: any);
+    readonly env: DBJSONEnvironment;
     endSave(br: Storage.BlobRequest): void;
     endLoad(br: Storage.BlobRequest): void;
     endDelete(br: Storage.BlobRequest): void;
@@ -13,7 +22,8 @@ export declare class JsonBlob extends Storage.StorageBlob {
     asString(): string;
 }
 export declare class JsonClient extends DB.DBClient {
-    constructor(storageManager: Storage.StorageManager);
+    constructor(env: DBJSONEnvironment);
+    readonly env: DBJSONEnvironment;
     createCollection(name: string, options: any): DB.DBCollection;
     createUpdate(col: JsonCollection, query: any, values: any): DB.DBUpdate;
     createDelete(col: JsonCollection, query: any): DB.DBDelete;
@@ -25,34 +35,35 @@ export declare class JsonClient extends DB.DBClient {
 }
 export declare class JsonCollection extends DB.DBCollection {
     blob: JsonBlob;
-    constructor(typeName: string, client: JsonClient, name: string, options: any);
+    constructor(env: DBJSONEnvironment, client: JsonClient, name: string, options: any);
     save(): void;
     tick(): void;
 }
 export declare class JsonUpdate extends DB.DBUpdate {
-    constructor(typeName: string, col: JsonCollection, query: any, values: any);
+    constructor(env: DBJSONEnvironment, col: JsonCollection, query: any, values: any);
     readonly blob: JsonBlob;
     tick(): void;
 }
 export declare class JsonDelete extends DB.DBDelete {
-    constructor(typeName: string, col: JsonCollection, query: any);
+    constructor(env: DBJSONEnvironment, col: JsonCollection, query: any);
     readonly blob: JsonBlob;
     tick(): void;
 }
 export declare class JsonFind extends DB.DBFind {
-    constructor(typeName: string, col: JsonCollection, filter: any);
+    constructor(env: DBJSONEnvironment, col: JsonCollection, filter: any);
     readonly blob: JsonBlob;
     tick(): void;
 }
 export declare class JsonQuery extends DB.DBQuery {
-    constructor(typeName: string, col: JsonCollection, filter: any);
+    constructor(env: DBJSONEnvironment, col: JsonCollection, filter: any);
     readonly blob: JsonBlob;
     tick(): void;
 }
 export declare class JsonIndex extends DB.DBIndex {
-    constructor(typeName: string, col: JsonCollection, uid: string);
+    constructor(env: DBJSONEnvironment, col: JsonCollection, uid: string);
     tick(): void;
 }
 export declare class JsonClose extends DB.DBClose {
-    constructor(typeName: string, client: JsonClient);
+    constructor(env: DBJSONEnvironment, client: JsonClient);
 }
+export {};

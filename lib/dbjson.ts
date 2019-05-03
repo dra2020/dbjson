@@ -3,10 +3,20 @@ import * as fs from 'fs';
 
 // Shared libraries
 import * as Util from '@terrencecrowley/util';
-import * as Log from '@terrencecrowley/log';
+import * as Context from '@terrencecrowley/context';
+import * as LogAbstract from '@terrencecrowley/logabstract';
 import * as FSM from '@terrencecrowley/fsm';
 import * as Storage from '@terrencecrowley/storage';
 import * as DB from '@terrencecrowley/dbabstract';
+
+
+interface DBJSONEnvironment
+{
+  context: Context.IContext;
+  log: LogAbstract.ILog;
+  fsmManager: FSM.FsmManager;
+  storageManager: Storage.StorageManager;
+}
 
 // JSONDB Collection Options:
 //  map: true if data is a map (object), false/nonexistent if an array
@@ -21,28 +31,30 @@ export class JsonBlob extends Storage.StorageBlob
   value: any;
   fsm: FSM.Fsm;
 
-  constructor(id: string, fsm: FSM.Fsm, options: any)
-    {
-      if (id.indexOf('.json') == -1)
-        id += '.json';
-      super(id);
+  constructor(env: DBJSONEnvironment, id: string, fsm: FSM.Fsm, options: any)
+  {
+    if (id.indexOf('.json') == -1)
+      id += '.json';
+    super(env, id);
 
-      this.options = options;
-      this.value = null;
-      this.fsm = fsm;
-    }
+    this.options = options;
+    this.value = null;
+    this.fsm = fsm;
+  }
+
+  get env(): DBJSONEnvironment { return this._env as DBJSONEnvironment; }
 
   endSave(br: Storage.BlobRequest): void
+  {
+    if (br.result() != Storage.ESuccess)
     {
-      if (br.result() != Storage.ESuccess)
-      {
-        Log.error('jsondb: json save failed');
-      }
-      else
-      {
-        Log.event('jsondb: save succeeded');
-      }
+      this.env.log.error('jsondb: json save failed');
     }
+    else
+    {
+      this.env.log.event('jsondb: save succeeded');
+    }
+  }
 
   endLoad(br: Storage.BlobRequest): void
     {
@@ -53,35 +65,35 @@ export class JsonBlob extends Storage.StorageBlob
         {
           this.value = {};
           this.setLoaded(Storage.StorageStateClean);
-          Log.event('jsondb: initializing to empty session index state');
+          this.env.log.event('jsondb: initializing to empty session index state');
           this.fsm.setState(FSM.FSM_DONE);
         }
         else if (this.id == 'access.json')
         {
           this.value = {};
           this.setLoaded(Storage.StorageStateClean);
-          Log.event('jsondb: initializing to empty access to session index state');
+          this.env.log.event('jsondb: initializing to empty access to session index state');
           this.fsm.setState(FSM.FSM_DONE);
         }
         else if (this.id == 'users.json')
         {
           this.value = [];
           this.setLoaded(Storage.StorageStateClean);
-          Log.event('jsondb: initializing to empty user index state');
+          this.env.log.event('jsondb: initializing to empty user index state');
           this.fsm.setState(FSM.FSM_DONE);
         }
         else
         {
-          Log.error(`JsonBlob: load of ${this.id} failed: ${br.asError()}`);
+          this.env.log.error(`JsonBlob: load of ${this.id} failed: ${br.asError()}`);
           this.fsm.setState(FSM.FSM_ERROR);
-          Log.error('jsondb: load failed');
+          this.env.log.error('jsondb: load failed');
         }
       }
       else
       {
         this.fromString(br.asString());
         this.fsm.setState(FSM.FSM_DONE);
-        Log.event('jsondb: load succeeded');
+        this.env.log.event('jsondb: load succeeded');
       }
     }
 
@@ -89,7 +101,7 @@ export class JsonBlob extends Storage.StorageBlob
     {
       if (br.result() != Storage.ESuccess)
       {
-        Log.event('jsondb: delete failed');
+        this.env.log.event('jsondb: delete failed');
       }
     }
 
@@ -101,22 +113,22 @@ export class JsonBlob extends Storage.StorageBlob
         if (this.options.version === undefined)
           this.value = o;
         else if (o.version != this.options.version)
-          Log.error(`jsonBlob: version mismatch for ${this.id}: expected ${this.options.version} != ${o.version}`);
+          this.env.log.error(`jsonBlob: version mismatch for ${this.id}: expected ${this.options.version} != ${o.version}`);
         else if (o[this.options.name] === undefined)
-          Log.error(`jsonBlob: missing value for ${this.id}: expected ${this.options.name}`);
+          this.env.log.error(`jsonBlob: missing value for ${this.id}: expected ${this.options.name}`);
         else
           this.value = o[this.options.name];
         if (this.value)
         {
           if (this.options.map)
-            Log.event(`jsondb: JsonBlob: successful load of ${this.id}: hashmap`);
+            this.env.log.event(`jsondb: JsonBlob: successful load of ${this.id}: hashmap`);
           else
-            Log.event(`INFO: JsonBlob: successful load of ${this.id}: array of ${this.value.length} items`);
+            this.env.log.event(`INFO: JsonBlob: successful load of ${this.id}: array of ${this.value.length} items`);
         }
       }
       catch (err)
       {
-        Log.error(`JsonBlob: unexpected exception in JSON parse: ${err.message}`);
+        this.env.log.error(`JsonBlob: unexpected exception in JSON parse: ${err.message}`);
       }
     }
 
@@ -134,304 +146,306 @@ export class JsonBlob extends Storage.StorageBlob
 
 export class JsonClient extends DB.DBClient
 {
-  constructor(storageManager: Storage.StorageManager)
-    {
-      super('JsonClient', storageManager);
-    }
+  constructor(env: DBJSONEnvironment)
+  {
+    super(env);
+  }
+
+  get env(): DBJSONEnvironment { return this._env as DBJSONEnvironment; }
 
   createCollection(name: string, options: any): DB.DBCollection
-    {  
-      return new JsonCollection('JsonCollection', this, name, options);
-    }
+  {  
+    return new JsonCollection(this.env, this, name, options);
+  }
 
   createUpdate(col: JsonCollection, query: any, values: any): DB.DBUpdate
-    {
-      return new JsonUpdate('JsonUpdate', col, query, values);
-    }
+  {
+    return new JsonUpdate(this.env, col, query, values);
+  }
 
   createDelete(col: JsonCollection, query: any): DB.DBDelete
-    {
-      return new JsonDelete('JsonDelete', col, query);
-    }
+  {
+    return new JsonDelete(this.env, col, query);
+  }
 
   createFind(col: JsonCollection, filter: any): DB.DBFind
-    {
-      return new JsonFind('JsonFind', col, filter);
-    }
+  {
+    return new JsonFind(this.env, col, filter);
+  }
 
   createQuery(col: JsonCollection, filter: any): DB.DBQuery
-    {
-      return new JsonQuery('JsonQuery', col, filter) as DB.DBQuery;
-    }
+  {
+    return new JsonQuery(this.env, col, filter) as DB.DBQuery;
+  }
 
   createIndex(col: JsonCollection, uid: string): DB.DBIndex
-    {
-      return new JsonIndex('JsonIndex', col, uid) as DB.DBIndex;
-    }
+  {
+    return new JsonIndex(this.env, col, uid) as DB.DBIndex;
+  }
 
   createClose(): DB.DBClose
-    {
-      return new JsonClose('JsonClose', this) as DB.DBClose;
-    }
+  {
+    return new JsonClose(this.env, this) as DB.DBClose;
+  }
 
   tick(): void
+  {
+    if (this.ready && this.state == FSM.FSM_STARTING)
     {
-      if (this.ready && this.state == FSM.FSM_STARTING)
-      {
-        // All the work is done at the collection level
-        this.setState(FSM.FSM_DONE);
-      }
-      if (this.state == DB.FSM_NEEDRELEASE)
-      {
-        this.setState(FSM.FSM_RELEASED);
-        Log.event(`jsondb: client closed`);
-      }
+      // All the work is done at the collection level
+      this.setState(FSM.FSM_DONE);
     }
+    if (this.state == DB.FSM_NEEDRELEASE)
+    {
+      this.setState(FSM.FSM_RELEASED);
+      this.env.log.event(`jsondb: client closed`);
+    }
+  }
 }
 
 export class JsonCollection extends DB.DBCollection
 {
   blob: JsonBlob;
 
-  constructor(typeName: string, client: JsonClient, name: string, options: any)
-    {
-      super(typeName, client, name, options);
-      this.waitOn(client);
-      this.blob = new JsonBlob(name, this, options);
-      this.save = this.save.bind(this);
-      setTimeout(this.save, 30000);
-    }
+  constructor(env: DBJSONEnvironment, client: JsonClient, name: string, options: any)
+  {
+    super(env, client, name, options);
+    this.waitOn(client);
+    this.blob = new JsonBlob(env, name, this, options);
+    this.save = this.save.bind(this);
+    setTimeout(this.save, 30000);
+  }
 
   save(): void
-    {
-      this.blob.checkSave(this.client.storageManager);
-      setTimeout(this.save, 30000);
-    }
+  {
+    this.blob.checkSave(this.client.env.storageManager);
+    setTimeout(this.save, 30000);
+  }
 
   tick(): void
+  {
+    if (this.ready && this.state == FSM.FSM_STARTING)
     {
-      if (this.ready && this.state == FSM.FSM_STARTING)
-      {
-        this.setState(FSM.FSM_PENDING);
-        this.blob.startLoad(this.client.storageManager);  // Done or failed state set in endLoad
-      }
+      this.setState(FSM.FSM_PENDING);
+      this.blob.startLoad(this.client.env.storageManager);  // Done or failed state set in endLoad
     }
+  }
 }
 
 export class JsonUpdate extends DB.DBUpdate
 {
-  constructor(typeName: string, col: JsonCollection, query: any, values: any)
-    {
-      super(typeName, col, query, values);
-      this.waitOn(col);
-    }
+  constructor(env: DBJSONEnvironment, col: JsonCollection, query: any, values: any)
+  {
+    super(env, col, query, values);
+    this.waitOn(col);
+  }
 
   get blob(): JsonBlob
-    {
-      let c: JsonCollection = this.col as JsonCollection;
-      return c.blob;
-    }
+  {
+    let c: JsonCollection = this.col as JsonCollection;
+    return c.blob;
+  }
 
   tick(): void
+  {
+    if (this.ready && this.isChildError)
+      this.setState(FSM.FSM_ERROR);
+    else if (this.ready && this.state == FSM.FSM_STARTING)
     {
-      if (this.ready && this.isChildError)
-        this.setState(FSM.FSM_ERROR);
-      else if (this.ready && this.state == FSM.FSM_STARTING)
+      let value: any = this.blob.value;
+      if (this.col.options.map)
       {
-        let value: any = this.blob.value;
-        if (this.col.options.map)
+        let o: any = value[this.query.id];
+        if (this.col.options.noobject)
         {
-          let o: any = value[this.query.id];
-          if (this.col.options.noobject)
-          {
-            value[this.query.id] = Util.shallowCopy(this.values.value);
-          }
-          else
-          {
-            if (o === undefined)
-              value[this.query.id] = Util.shallowCopy(this.values);
-            else
-              Util.shallowAssign(o, this.values);
-          }
+          value[this.query.id] = Util.shallowCopy(this.values.value);
         }
         else
         {
-          let o: any = undefined;
-          for (let i: number = 0; o === undefined && i < value.length; i++)
-            if (value[i]['id'] == this.query.id)
-              o = value[i];
           if (o === undefined)
-            value.push(Util.shallowCopy(this.values))
+            value[this.query.id] = Util.shallowCopy(this.values);
           else
             Util.shallowAssign(o, this.values);
         }
-        this.blob.setDirty();
-        this.setState(FSM.FSM_DONE);
       }
+      else
+      {
+        let o: any = undefined;
+        for (let i: number = 0; o === undefined && i < value.length; i++)
+          if (value[i]['id'] == this.query.id)
+            o = value[i];
+        if (o === undefined)
+          value.push(Util.shallowCopy(this.values))
+        else
+          Util.shallowAssign(o, this.values);
+      }
+      this.blob.setDirty();
+      this.setState(FSM.FSM_DONE);
     }
+  }
 }
 
 export class JsonDelete extends DB.DBDelete
 {
-  constructor(typeName: string, col: JsonCollection, query: any)
-    {
-      super(typeName, col, query);
-      this.waitOn(col);
-    }
+  constructor(env: DBJSONEnvironment, col: JsonCollection, query: any)
+  {
+    super(env, col, query);
+    this.waitOn(col);
+  }
 
   get blob(): JsonBlob
-    {
-      let c: JsonCollection = this.col as JsonCollection;
-      return c.blob;
-    }
+  {
+    let c: JsonCollection = this.col as JsonCollection;
+    return c.blob;
+  }
 
   tick(): void
+  {
+    if (this.ready && this.isChildError)
+      this.setState(FSM.FSM_ERROR);
+    else if (this.ready && this.state == FSM.FSM_STARTING)
     {
-      if (this.ready && this.isChildError)
-        this.setState(FSM.FSM_ERROR);
-      else if (this.ready && this.state == FSM.FSM_STARTING)
+      let value: any = this.blob.value;
+      if (this.col.options.map)
+        delete value[this.query.id];
+      else
       {
-        let value: any = this.blob.value;
-        if (this.col.options.map)
-          delete value[this.query.id];
-        else
-        {
-          for (let i: number = 0; i < value.length; i++)
-            if (value[i]['id'] == this.query.id)
-            {
-              value.splice(i, 1);
-              break;
-            }
-        }
-        this.blob.setDirty();
-        this.setState(FSM.FSM_DONE);
+        for (let i: number = 0; i < value.length; i++)
+          if (value[i]['id'] == this.query.id)
+          {
+            value.splice(i, 1);
+            break;
+          }
       }
+      this.blob.setDirty();
+      this.setState(FSM.FSM_DONE);
     }
+  }
 }
 
 export class JsonFind extends DB.DBFind
 {
-  constructor(typeName: string, col: JsonCollection, filter: any)
-    {
-      super(typeName, col, filter);
-      this.waitOn(col);
-    }
+  constructor(env: DBJSONEnvironment, col: JsonCollection, filter: any)
+  {
+    super(env, col, filter);
+    this.waitOn(col);
+  }
 
   get blob(): JsonBlob
-    {
-      let c: JsonCollection = this.col as JsonCollection;
-      return c.blob;
-    }
+  {
+    let c: JsonCollection = this.col as JsonCollection;
+    return c.blob;
+  }
 
   tick(): void
+  {
+    if (this.ready && this.isChildError)
+      this.setState(FSM.FSM_ERROR);
+    else if (this.ready && this.state == FSM.FSM_STARTING)
     {
-      if (this.ready && this.isChildError)
-        this.setState(FSM.FSM_ERROR);
-      else if (this.ready && this.state == FSM.FSM_STARTING)
+      let value: any = this.blob.value;
+      if (this.col.options.map)
       {
-        let value: any = this.blob.value;
-        if (this.col.options.map)
+        if (this.filter.id !== undefined)
         {
-          if (this.filter.id !== undefined)
-          {
-            let result: any = value[this.filter.id];
-            if (result && this.col.options.noobject)
-              result = { id: this.filter.id, value: result };
-            if (result !== undefined && Util.partialEqual(result, this.filter))
-              this.result = result;
-          }
-          else
-          {
-            if (this.col.options.noobject)
-              throw 'error: cannot call Find without id property on noobject collection';
-            for (let id in value) if (value.hasOwnProperty(id))
-              if (Util.partialEqual(value[id], this.filter))
-              {
-                this.result = value[id];
-                break;
-              }
-          }
+          let result: any = value[this.filter.id];
+          if (result && this.col.options.noobject)
+            result = { id: this.filter.id, value: result };
+          if (result !== undefined && Util.partialEqual(result, this.filter))
+            this.result = result;
         }
         else
         {
-          for (let i: number = 0; i < value.length; i++)
-            if (Util.partialEqual(value[i], this.filter))
+          if (this.col.options.noobject)
+            throw 'error: cannot call Find without id property on noobject collection';
+          for (let id in value) if (value.hasOwnProperty(id))
+            if (Util.partialEqual(value[id], this.filter))
             {
-              this.result = value[i];
+              this.result = value[id];
               break;
             }
         }
-        this.setState(FSM.FSM_DONE);
       }
+      else
+      {
+        for (let i: number = 0; i < value.length; i++)
+          if (Util.partialEqual(value[i], this.filter))
+          {
+            this.result = value[i];
+            break;
+          }
+      }
+      this.setState(FSM.FSM_DONE);
     }
+  }
 }
 
 export class JsonQuery extends DB.DBQuery
 {
-  constructor(typeName: string, col: JsonCollection, filter: any)
-    {
-      super(typeName, col, filter);
-      this.waitOn(col);
-    }
+  constructor(env: DBJSONEnvironment, col: JsonCollection, filter: any)
+  {
+    super(env, col, filter);
+    this.waitOn(col);
+  }
 
   get blob(): JsonBlob
-    {
-      let c: JsonCollection = this.col as JsonCollection;
-      return c.blob;
-    }
+  {
+    let c: JsonCollection = this.col as JsonCollection;
+    return c.blob;
+  }
 
   tick(): void
+  {
+    if (this.ready && this.isChildError)
+      this.setState(FSM.FSM_ERROR);
+    else if (this.ready && this.state == FSM.FSM_STARTING)
     {
-      if (this.ready && this.isChildError)
-        this.setState(FSM.FSM_ERROR);
-      else if (this.ready && this.state == FSM.FSM_STARTING)
+      this.result = [];
+      let value: any = this.blob.value;
+      if (this.col.options.map)
       {
-        this.result = [];
-        let value: any = this.blob.value;
-        if (this.col.options.map)
-        {
-          if (this.col.options.noobject)
-            throw 'error: cannot call Query on noobject collection';
+        if (this.col.options.noobject)
+          throw 'error: cannot call Query on noobject collection';
 
-          for (let id in value) if (value.hasOwnProperty(id))
-            if (Util.partialEqual(value[id], this.filter))
-              this.result.push(value[id]);
-        }
-        else
-        {
-          for (let i: number = 0; i < value.length; i++)
-            if (Util.partialEqual(value[i], this.filter))
-              this.result.push(value[i]);
-        }
-        this.setState(FSM.FSM_DONE);
+        for (let id in value) if (value.hasOwnProperty(id))
+          if (Util.partialEqual(value[id], this.filter))
+            this.result.push(value[id]);
       }
+      else
+      {
+        for (let i: number = 0; i < value.length; i++)
+          if (Util.partialEqual(value[i], this.filter))
+            this.result.push(value[i]);
+      }
+      this.setState(FSM.FSM_DONE);
     }
+  }
 }
 
 export class JsonIndex extends DB.DBIndex
 {
-  constructor(typeName: string, col: JsonCollection, uid: string)
-    {
-      super(typeName, col, uid);
-      this.waitOn(col);
-    }
+  constructor(env: DBJSONEnvironment, col: JsonCollection, uid: string)
+  {
+    super(env, col, uid);
+    this.waitOn(col);
+  }
 
   tick(): void
+  {
+    if (this.ready && this.isChildError)
+      this.setState(FSM.FSM_ERROR);
+    else if (this.ready && this.state == FSM.FSM_STARTING)
     {
-      if (this.ready && this.isChildError)
-        this.setState(FSM.FSM_ERROR);
-      else if (this.ready && this.state == FSM.FSM_STARTING)
-      {
-        // No index necessary - we do linear search
-        this.setState(FSM.FSM_DONE);
-      }
+      // No index necessary - we do linear search
+      this.setState(FSM.FSM_DONE);
     }
+  }
 }
 
 export class JsonClose extends DB.DBClose
 {
-  constructor(typeName: string, client: JsonClient)
-    {
-      super(typeName, client);
-    }
+  constructor(env: DBJSONEnvironment, client: JsonClient)
+  {
+    super(env, client);
+  }
 }
