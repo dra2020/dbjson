@@ -291,7 +291,7 @@ class JsonUpdate extends DB.DBUpdate {
         return c.blob;
     }
     tick() {
-        if (this.ready && this.isChildError)
+        if (this.ready && this.isDependentError)
             this.setState(FSM.FSM_ERROR);
         else if (this.ready && this.state == FSM.FSM_STARTING) {
             let value = this.blob.value;
@@ -333,7 +333,7 @@ class JsonDelete extends DB.DBDelete {
         return c.blob;
     }
     tick() {
-        if (this.ready && this.isChildError)
+        if (this.ready && this.isDependentError)
             this.setState(FSM.FSM_ERROR);
         else if (this.ready && this.state == FSM.FSM_STARTING) {
             let value = this.blob.value;
@@ -362,7 +362,7 @@ class JsonFind extends DB.DBFind {
         return c.blob;
     }
     tick() {
-        if (this.ready && this.isChildError)
+        if (this.ready && this.isDependentError)
             this.setState(FSM.FSM_ERROR);
         else if (this.ready && this.state == FSM.FSM_STARTING) {
             let value = this.blob.value;
@@ -407,7 +407,7 @@ class JsonQuery extends DB.DBQuery {
         return c.blob;
     }
     tick() {
-        if (this.ready && this.isChildError)
+        if (this.ready && this.isDependentError)
             this.setState(FSM.FSM_ERROR);
         else if (this.ready && this.state == FSM.FSM_STARTING) {
             this.result = [];
@@ -436,7 +436,7 @@ class JsonIndex extends DB.DBIndex {
         this.waitOn(col);
     }
     tick() {
-        if (this.ready && this.isChildError)
+        if (this.ready && this.isDependentError)
             this.setState(FSM.FSM_ERROR);
         else if (this.ready && this.state == FSM.FSM_STARTING) {
             // No index necessary - we do linear search

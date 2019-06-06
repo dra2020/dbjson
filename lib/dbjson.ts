@@ -248,7 +248,7 @@ export class JsonUpdate extends DB.DBUpdate
 
   tick(): void
   {
-    if (this.ready && this.isChildError)
+    if (this.ready && this.isDependentError)
       this.setState(FSM.FSM_ERROR);
     else if (this.ready && this.state == FSM.FSM_STARTING)
     {
@@ -301,7 +301,7 @@ export class JsonDelete extends DB.DBDelete
 
   tick(): void
   {
-    if (this.ready && this.isChildError)
+    if (this.ready && this.isDependentError)
       this.setState(FSM.FSM_ERROR);
     else if (this.ready && this.state == FSM.FSM_STARTING)
     {
@@ -339,7 +339,7 @@ export class JsonFind extends DB.DBFind
 
   tick(): void
   {
-    if (this.ready && this.isChildError)
+    if (this.ready && this.isDependentError)
       this.setState(FSM.FSM_ERROR);
     else if (this.ready && this.state == FSM.FSM_STARTING)
     {
@@ -396,7 +396,7 @@ export class JsonQuery extends DB.DBQuery
 
   tick(): void
   {
-    if (this.ready && this.isChildError)
+    if (this.ready && this.isDependentError)
       this.setState(FSM.FSM_ERROR);
     else if (this.ready && this.state == FSM.FSM_STARTING)
     {
@@ -432,7 +432,7 @@ export class JsonIndex extends DB.DBIndex
 
   tick(): void
   {
-    if (this.ready && this.isChildError)
+    if (this.ready && this.isDependentError)
       this.setState(FSM.FSM_ERROR);
     else if (this.ready && this.state == FSM.FSM_STARTING)
     {
