@@ -1,6 +1,6 @@
 {
   "name": "@terrencecrowley/dbjson",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "description": "JSON file-based implementation of the simple DB abstraction.",
   "main": "dist/dbjson.js",
   "types": "./dist/all.d.ts",

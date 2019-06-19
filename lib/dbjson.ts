@@ -61,25 +61,14 @@ export class JsonBlob extends Storage.StorageBlob
       if (br.result() != Storage.ESuccess)
       {
         // Special case our bootstrapping state
-        if (this.id == 'state.json')
+        if (br.result() === Storage.ENotFound)
         {
-          this.value = {};
+          if (this.options.map)
+            this.value = {};
+          else
+            this.value = [];
           this.setLoaded(Storage.StorageStateClean);
-          this.env.log.event('jsondb: initializing to empty session index state');
-          this.fsm.setState(FSM.FSM_DONE);
-        }
-        else if (this.id == 'access.json')
-        {
-          this.value = {};
-          this.setLoaded(Storage.StorageStateClean);
-          this.env.log.event('jsondb: initializing to empty access to session index state');
-          this.fsm.setState(FSM.FSM_DONE);
-        }
-        else if (this.id == 'users.json')
-        {
-          this.value = [];
-          this.setLoaded(Storage.StorageStateClean);
-          this.env.log.event('jsondb: initializing to empty user index state');
+          this.env.log.event('jsondb: initializing ${this.id} to empty state');
           this.fsm.setState(FSM.FSM_DONE);
         }
         else
