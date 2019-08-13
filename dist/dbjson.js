@@ -125,10 +125,10 @@ __export(__webpack_require__(/*! ./dbjson */ "./lib/dbjson.ts"));
 
 Object.defineProperty(exports, "__esModule", { value: true });
 // Shared libraries
-const Util = __webpack_require__(/*! @terrencecrowley/util */ "@terrencecrowley/util");
-const FSM = __webpack_require__(/*! @terrencecrowley/fsm */ "@terrencecrowley/fsm");
-const Storage = __webpack_require__(/*! @terrencecrowley/storage */ "@terrencecrowley/storage");
-const DB = __webpack_require__(/*! @terrencecrowley/dbabstract */ "@terrencecrowley/dbabstract");
+const Util = __webpack_require__(/*! @dra2020/util */ "@dra2020/util");
+const FSM = __webpack_require__(/*! @dra2020/fsm */ "@dra2020/fsm");
+const Storage = __webpack_require__(/*! @dra2020/storage */ "@dra2020/storage");
+const DB = __webpack_require__(/*! @dra2020/dbabstract */ "@dra2020/dbabstract");
 // JSONDB Collection Options:
 //  map: true if data is a map (object), false/nonexistent if an array
 //  version: current state version (if undefined, value is directly contents of JSON blob)
@@ -446,47 +446,47 @@ exports.JsonClose = JsonClose;
 
 /***/ }),
 
-/***/ "@terrencecrowley/dbabstract":
-/*!**********************************************!*\
-  !*** external "@terrencecrowley/dbabstract" ***!
-  \**********************************************/
+/***/ "@dra2020/dbabstract":
+/*!**************************************!*\
+  !*** external "@dra2020/dbabstract" ***!
+  \**************************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = require("@terrencecrowley/dbabstract");
+module.exports = require("@dra2020/dbabstract");
 
 /***/ }),
 
-/***/ "@terrencecrowley/fsm":
-/*!***************************************!*\
-  !*** external "@terrencecrowley/fsm" ***!
-  \***************************************/
+/***/ "@dra2020/fsm":
+/*!*******************************!*\
+  !*** external "@dra2020/fsm" ***!
+  \*******************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = require("@terrencecrowley/fsm");
+module.exports = require("@dra2020/fsm");
 
 /***/ }),
 
-/***/ "@terrencecrowley/storage":
-/*!*******************************************!*\
-  !*** external "@terrencecrowley/storage" ***!
-  \*******************************************/
+/***/ "@dra2020/storage":
+/*!***********************************!*\
+  !*** external "@dra2020/storage" ***!
+  \***********************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = require("@terrencecrowley/storage");
+module.exports = require("@dra2020/storage");
 
 /***/ }),
 
-/***/ "@terrencecrowley/util":
-/*!****************************************!*\
-  !*** external "@terrencecrowley/util" ***!
-  \****************************************/
+/***/ "@dra2020/util":
+/*!********************************!*\
+  !*** external "@dra2020/util" ***!
+  \********************************/
 /*! no static exports found */
 /***/ (function(module, exports) {
 
-module.exports = require("@terrencecrowley/util");
+module.exports = require("@dra2020/util");
 
 /***/ })
 

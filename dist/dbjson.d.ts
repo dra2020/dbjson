@@ -1,8 +1,8 @@
-import * as Context from '@terrencecrowley/context';
-import * as LogAbstract from '@terrencecrowley/logabstract';
-import * as FSM from '@terrencecrowley/fsm';
-import * as Storage from '@terrencecrowley/storage';
-import * as DB from '@terrencecrowley/dbabstract';
+import * as Context from '@dra2020/context';
+import * as LogAbstract from '@dra2020/logabstract';
+import * as FSM from '@dra2020/fsm';
+import * as Storage from '@dra2020/storage';
+import * as DB from '@dra2020/dbabstract';
 interface DBJSONEnvironment {
     context: Context.IContext;
     log: LogAbstract.ILog;
