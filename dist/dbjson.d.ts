@@ -26,6 +26,7 @@ export declare class JsonClient extends DB.DBClient {
     readonly env: DBJSONEnvironment;
     createCollection(name: string, options: any): DB.DBCollection;
     createUpdate(col: JsonCollection, query: any, values: any): DB.DBUpdate;
+    createUnset(col: JsonCollection, query: any, values: any): DB.DBUnset;
     createDelete(col: JsonCollection, query: any): DB.DBDelete;
     createFind(col: JsonCollection, filter: any): DB.DBFind;
     createQuery(col: JsonCollection, filter: any): DB.DBQuery;
@@ -40,6 +41,11 @@ export declare class JsonCollection extends DB.DBCollection {
     tick(): void;
 }
 export declare class JsonUpdate extends DB.DBUpdate {
+    constructor(env: DBJSONEnvironment, col: JsonCollection, query: any, values: any);
+    readonly blob: JsonBlob;
+    tick(): void;
+}
+export declare class JsonUnset extends DB.DBUnset {
     constructor(env: DBJSONEnvironment, col: JsonCollection, query: any, values: any);
     readonly blob: JsonBlob;
     tick(): void;

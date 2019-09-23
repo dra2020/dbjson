@@ -152,6 +152,11 @@ export class JsonClient extends DB.DBClient
     return new JsonUpdate(this.env, col, query, values);
   }
 
+  createUnset(col: JsonCollection, query: any, values: any): DB.DBUnset
+  {
+    return new JsonUnset(this.env, col, query, values);
+  }
+
   createDelete(col: JsonCollection, query: any): DB.DBDelete
   {
     return new JsonDelete(this.env, col, query);
@@ -267,6 +272,55 @@ export class JsonUpdate extends DB.DBUpdate
           value.push(Util.shallowCopy(this.values))
         else
           Util.shallowAssign(o, this.values);
+      }
+      this.blob.setDirty();
+      this.setState(FSM.FSM_DONE);
+    }
+  }
+}
+
+export class JsonUnset extends DB.DBUnset
+{
+  constructor(env: DBJSONEnvironment, col: JsonCollection, query: any, values: any)
+  {
+    super(env, col, query, values);
+    this.waitOn(col);
+  }
+
+  get blob(): JsonBlob
+  {
+    let c: JsonCollection = this.col as JsonCollection;
+    return c.blob;
+  }
+
+  tick(): void
+  {
+    if (this.ready && this.isDependentError)
+      this.setState(FSM.FSM_ERROR);
+    else if (this.ready && this.state == FSM.FSM_STARTING)
+    {
+      let value: any = this.blob.value;
+      if (this.col.options.map)
+      {
+        let o: any = value[this.query.id];
+        if (this.col.options.noobject)
+        {
+          // No meaning
+        }
+        else
+        {
+          if (o !== undefined)
+            Util.shallowDelete(o, this.values);
+        }
+      }
+      else
+      {
+        let o: any = undefined;
+        for (let i: number = 0; o === undefined && i < value.length; i++)
+          if (value[i]['id'] == this.query.id)
+            o = value[i];
+        if (o !== undefined)
+          Util.shallowDelete(o, this.values);
       }
       this.blob.setDirty();
       this.setState(FSM.FSM_DONE);

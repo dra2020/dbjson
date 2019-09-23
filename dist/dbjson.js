@@ -225,6 +225,9 @@ class JsonClient extends DB.DBClient {
     createUpdate(col, query, values) {
         return new JsonUpdate(this.env, col, query, values);
     }
+    createUnset(col, query, values) {
+        return new JsonUnset(this.env, col, query, values);
+    }
     createDelete(col, query) {
         return new JsonDelete(this.env, col, query);
     }
@@ -314,6 +317,44 @@ class JsonUpdate extends DB.DBUpdate {
     }
 }
 exports.JsonUpdate = JsonUpdate;
+class JsonUnset extends DB.DBUnset {
+    constructor(env, col, query, values) {
+        super(env, col, query, values);
+        this.waitOn(col);
+    }
+    get blob() {
+        let c = this.col;
+        return c.blob;
+    }
+    tick() {
+        if (this.ready && this.isDependentError)
+            this.setState(FSM.FSM_ERROR);
+        else if (this.ready && this.state == FSM.FSM_STARTING) {
+            let value = this.blob.value;
+            if (this.col.options.map) {
+                let o = value[this.query.id];
+                if (this.col.options.noobject) {
+                    // No meaning
+                }
+                else {
+                    if (o !== undefined)
+                        Util.shallowDelete(o, this.values);
+                }
+            }
+            else {
+                let o = undefined;
+                for (let i = 0; o === undefined && i < value.length; i++)
+                    if (value[i]['id'] == this.query.id)
+                        o = value[i];
+                if (o !== undefined)
+                    Util.shallowDelete(o, this.values);
+            }
+            this.blob.setDirty();
+            this.setState(FSM.FSM_DONE);
+        }
+    }
+}
+exports.JsonUnset = JsonUnset;
 class JsonDelete extends DB.DBDelete {
     constructor(env, col, query) {
         super(env, col, query);
