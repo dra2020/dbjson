@@ -133,6 +133,8 @@ export class JsonBlob extends Storage.StorageBlob
     }
 }
 
+export function create(env: DBJSONEnvironment): DB.DBClient { return new JsonClient(env) }
+
 export class JsonClient extends DB.DBClient
 {
   constructor(env: DBJSONEnvironment)

@@ -214,6 +214,8 @@ class JsonBlob extends Storage.StorageBlob {
     }
 }
 exports.JsonBlob = JsonBlob;
+function create(env) { return new JsonClient(env); }
+exports.create = create;
 class JsonClient extends DB.DBClient {
     constructor(env) {
         super(env);

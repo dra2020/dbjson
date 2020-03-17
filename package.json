@@ -1,6 +1,6 @@
 {
   "name": "@dra2020/dbjson",
-  "version": "1.3.1",
+  "version": "1.3.2",
   "description": "JSON file-based implementation of the simple DB abstraction.",
   "main": "dist/dbjson.js",
   "types": "./dist/all.d.ts",

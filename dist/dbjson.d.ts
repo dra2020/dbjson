@@ -21,6 +21,7 @@ export declare class JsonBlob extends Storage.StorageBlob {
     fromString(s: string): void;
     asString(): string;
 }
+export declare function create(env: DBJSONEnvironment): DB.DBClient;
 export declare class JsonClient extends DB.DBClient {
     constructor(env: DBJSONEnvironment);
     get env(): DBJSONEnvironment;
