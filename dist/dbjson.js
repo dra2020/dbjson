@@ -157,7 +157,7 @@ class JsonBlob extends Storage.StorageBlob {
         if (br.result() != Storage.ESuccess) {
             // Special case our bootstrapping state
             if (br.result() === Storage.ENotFound) {
-                if (this.options.map)
+                if (this.options.FileOptions.map)
                     this.value = {};
                 else
                     this.value = [];
@@ -185,16 +185,16 @@ class JsonBlob extends Storage.StorageBlob {
     fromString(s) {
         try {
             let o = JSON.parse(s);
-            if (this.options.version === undefined)
+            if (this.options.FileOptions.version === undefined)
                 this.value = o;
-            else if (o.version != this.options.version)
-                this.env.log.error(`jsonBlob: version mismatch for ${this.id}: expected ${this.options.version} != ${o.version}`);
-            else if (o[this.options.name] === undefined)
-                this.env.log.error(`jsonBlob: missing value for ${this.id}: expected ${this.options.name}`);
+            else if (o.version != this.options.FileOptions.version)
+                this.env.log.error(`jsonBlob: version mismatch for ${this.id}: expected ${this.options.FileOptions.version} != ${o.version}`);
+            else if (o[this.options.FileOptions.name] === undefined)
+                this.env.log.error(`jsonBlob: missing value for ${this.id}: expected ${this.options.FileOptions.name}`);
             else
-                this.value = o[this.options.name];
+                this.value = o[this.options.FileOptions.name];
             if (this.value) {
-                if (this.options.map)
+                if (this.options.FileOptions.map)
                     this.env.log.event(`jsondb: JsonBlob: successful load of ${this.id}: hashmap`);
                 else
                     this.env.log.event(`INFO: JsonBlob: successful load of ${this.id}: array of ${this.value.length} items`);
@@ -206,8 +206,8 @@ class JsonBlob extends Storage.StorageBlob {
     }
     asString() {
         let o;
-        if (this.options.version !== undefined)
-            o = { version: this.options.version, [this.options.name]: this.value };
+        if (this.options.FileOptions.version !== undefined)
+            o = { version: this.options.FileOptions.version, [this.options.FileOptions.name]: this.value };
         else
             o = this.value;
         return JSON.stringify(o);
@@ -243,6 +243,12 @@ class JsonClient extends DB.DBClient {
     createClose() {
         return new JsonClose(this.env, this);
     }
+    createStream(col) {
+        return col.createStream();
+    }
+    closeStream(col) {
+        col.closeStream();
+    }
     tick() {
         if (this.ready && this.state == FSM.FSM_STARTING) {
             // All the work is done at the collection level
@@ -255,13 +261,46 @@ class JsonClient extends DB.DBClient {
     }
 }
 exports.JsonClient = JsonClient;
+class KeySet {
+    constructor() {
+        this.reset();
+    }
+    reset() {
+        this.set = {};
+    }
+    test(o) {
+        if (o.id === undefined)
+            return true;
+        let b = this.set[o.id] !== undefined;
+        this.set[o.id] = true;
+        return b;
+    }
+}
 class JsonCollection extends DB.DBCollection {
     constructor(env, client, name, options) {
         super(env, client, name, options);
+        if (this.options.FileOptions === undefined)
+            this.options.FileOptions = { map: true };
         this.waitOn(client);
         this.blob = new JsonBlob(env, name, this, options);
         this.save = this.save.bind(this);
         setTimeout(this.save, 30000);
+        this.fsmStream = null;
+    }
+    createStream() {
+        if (this.fsmStream == null)
+            this.fsmStream = new FSM.FsmArray(this.env, new KeySet());
+        return this.fsmStream;
+    }
+    closeStream() {
+        if (this.fsmStream) {
+            this.fsmStream.setState(FSM.FSM_DONE);
+            this.fsmStream = null;
+        }
+    }
+    addToStream(o) {
+        if (this.fsmStream && o.id !== undefined)
+            this.fsmStream.push(o);
     }
     save() {
         this.blob.checkSave(this.client.env.storageManager);
@@ -280,18 +319,17 @@ class JsonUpdate extends DB.DBUpdate {
         super(env, col, query, values);
         this.waitOn(col);
     }
-    get blob() {
-        let c = this.col;
-        return c.blob;
-    }
+    get jcol() { return this.col; }
+    get blob() { return this.jcol.blob; }
     tick() {
         if (this.ready && this.isDependentError)
             this.setState(FSM.FSM_ERROR);
         else if (this.ready && this.state == FSM.FSM_STARTING) {
+            this.jcol.addToStream(this.query);
             let value = this.blob.value;
-            if (this.col.options.map) {
+            if (this.col.options.FileOptions.map) {
                 let o = value[this.query.id];
-                if (this.col.options.noobject) {
+                if (this.col.options.FileOptions.noobject) {
                     value[this.query.id] = Util.shallowCopy(this.values.value);
                 }
                 else {
@@ -322,18 +360,17 @@ class JsonUnset extends DB.DBUnset {
         super(env, col, query, values);
         this.waitOn(col);
     }
-    get blob() {
-        let c = this.col;
-        return c.blob;
-    }
+    get jcol() { return this.col; }
+    get blob() { return this.jcol.blob; }
     tick() {
         if (this.ready && this.isDependentError)
             this.setState(FSM.FSM_ERROR);
         else if (this.ready && this.state == FSM.FSM_STARTING) {
+            this.jcol.addToStream(this.query);
             let value = this.blob.value;
-            if (this.col.options.map) {
+            if (this.col.options.FileOptions.map) {
                 let o = value[this.query.id];
-                if (this.col.options.noobject) {
+                if (this.col.options.FileOptions.noobject) {
                     // No meaning
                 }
                 else {
@@ -369,7 +406,7 @@ class JsonDelete extends DB.DBDelete {
             this.setState(FSM.FSM_ERROR);
         else if (this.ready && this.state == FSM.FSM_STARTING) {
             let value = this.blob.value;
-            if (this.col.options.map)
+            if (this.col.options.FileOptions.map)
                 delete value[this.query.id];
             else {
                 for (let i = 0; i < value.length; i++)
@@ -398,16 +435,16 @@ class JsonFind extends DB.DBFind {
             this.setState(FSM.FSM_ERROR);
         else if (this.ready && this.state == FSM.FSM_STARTING) {
             let value = this.blob.value;
-            if (this.col.options.map) {
+            if (this.col.options.FileOptions.map) {
                 if (this.filter.id !== undefined) {
                     let result = value[this.filter.id];
-                    if (result && this.col.options.noobject)
+                    if (result && this.col.options.FileOptions.noobject)
                         result = { id: this.filter.id, value: result };
                     if (result !== undefined && Util.partialEqual(result, this.filter))
                         this.result = result;
                 }
                 else {
-                    if (this.col.options.noobject)
+                    if (this.col.options.FileOptions.noobject)
                         throw 'error: cannot call Find without id property on noobject collection';
                     for (let id in value)
                         if (value.hasOwnProperty(id))
@@ -442,20 +479,19 @@ class JsonQuery extends DB.DBQuery {
         if (this.ready && this.isDependentError)
             this.setState(FSM.FSM_ERROR);
         else if (this.ready && this.state == FSM.FSM_STARTING) {
-            this.result = [];
             let value = this.blob.value;
-            if (this.col.options.map) {
-                if (this.col.options.noobject)
+            if (this.col.options.FileOptions.map) {
+                if (this.col.options.FileOptions.noobject)
                     throw 'error: cannot call Query on noobject collection';
                 for (let id in value)
                     if (value.hasOwnProperty(id))
                         if (Util.partialEqual(value[id], this.filter))
-                            this.result.push(value[id]);
+                            this.fsmResult.push(value[id]);
             }
             else {
                 for (let i = 0; i < value.length; i++)
                     if (Util.partialEqual(value[i], this.filter))
-                        this.result.push(value[i]);
+                        this.fsmResult.push(value[i]);
             }
             this.setState(FSM.FSM_DONE);
         }

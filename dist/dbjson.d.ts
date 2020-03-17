@@ -14,7 +14,7 @@ export declare class JsonBlob extends Storage.StorageBlob {
     value: any;
     fsm: FSM.Fsm;
     constructor(env: DBJSONEnvironment, id: string, fsm: FSM.Fsm, options: any);
-    readonly env: DBJSONEnvironment;
+    get env(): DBJSONEnvironment;
     endSave(br: Storage.BlobRequest): void;
     endLoad(br: Storage.BlobRequest): void;
     endDelete(br: Storage.BlobRequest): void;
@@ -23,7 +23,7 @@ export declare class JsonBlob extends Storage.StorageBlob {
 }
 export declare class JsonClient extends DB.DBClient {
     constructor(env: DBJSONEnvironment);
-    readonly env: DBJSONEnvironment;
+    get env(): DBJSONEnvironment;
     createCollection(name: string, options: any): DB.DBCollection;
     createUpdate(col: JsonCollection, query: any, values: any): DB.DBUpdate;
     createUnset(col: JsonCollection, query: any, values: any): DB.DBUnset;
@@ -32,37 +32,45 @@ export declare class JsonClient extends DB.DBClient {
     createQuery(col: JsonCollection, filter: any): DB.DBQuery;
     createIndex(col: JsonCollection, uid: string): DB.DBIndex;
     createClose(): DB.DBClose;
+    createStream(col: JsonCollection): FSM.FsmArray;
+    closeStream(col: JsonCollection): void;
     tick(): void;
 }
 export declare class JsonCollection extends DB.DBCollection {
     blob: JsonBlob;
+    fsmStream: FSM.FsmArray;
     constructor(env: DBJSONEnvironment, client: JsonClient, name: string, options: any);
+    createStream(): FSM.FsmArray;
+    closeStream(): void;
+    addToStream(o: any): void;
     save(): void;
     tick(): void;
 }
 export declare class JsonUpdate extends DB.DBUpdate {
     constructor(env: DBJSONEnvironment, col: JsonCollection, query: any, values: any);
-    readonly blob: JsonBlob;
+    get jcol(): JsonCollection;
+    get blob(): JsonBlob;
     tick(): void;
 }
 export declare class JsonUnset extends DB.DBUnset {
     constructor(env: DBJSONEnvironment, col: JsonCollection, query: any, values: any);
-    readonly blob: JsonBlob;
+    get jcol(): JsonCollection;
+    get blob(): JsonBlob;
     tick(): void;
 }
 export declare class JsonDelete extends DB.DBDelete {
     constructor(env: DBJSONEnvironment, col: JsonCollection, query: any);
-    readonly blob: JsonBlob;
+    get blob(): JsonBlob;
     tick(): void;
 }
 export declare class JsonFind extends DB.DBFind {
     constructor(env: DBJSONEnvironment, col: JsonCollection, filter: any);
-    readonly blob: JsonBlob;
+    get blob(): JsonBlob;
     tick(): void;
 }
 export declare class JsonQuery extends DB.DBQuery {
     constructor(env: DBJSONEnvironment, col: JsonCollection, filter: any);
-    readonly blob: JsonBlob;
+    get blob(): JsonBlob;
     tick(): void;
 }
 export declare class JsonIndex extends DB.DBIndex {
