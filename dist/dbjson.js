@@ -495,6 +495,7 @@ class JsonQuery extends DB.DBQuery {
                     if (Util.partialEqual(value[i], this.filter))
                         this.fsmResult.push(value[i]);
             }
+            this.fsmResult.setState(FSM.FSM_DONE);
             this.setState(FSM.FSM_DONE);
         }
     }
